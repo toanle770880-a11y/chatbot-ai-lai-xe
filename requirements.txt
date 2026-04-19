@@ -3,3 +3,4 @@ streamlit
 google-genai
 langchain-chroma
 langchain-huggingface
+protobuf==4.25.3
