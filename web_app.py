@@ -15,7 +15,7 @@ def load_ai_system():
     api_key = st.secrets["GOOGLE_API_KEY"]
     if not api_key:
         st.error("❌ Chưa thiết lập GOOGLE_API_KEY")
-    st.stop()
+        st.stop()
     
 
     client = genai.Client(api_key=api_key)
