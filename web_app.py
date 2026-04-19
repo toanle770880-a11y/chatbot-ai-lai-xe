@@ -207,13 +207,24 @@ with tab1:
                     docs = retriever.invoke(prompt)
                     context = "\n".join([doc.page_content for doc in docs])
 
+                    # --- PHẦN PROMPT ĐÃ ĐƯỢC SỬA LẠI ĐÂY ---
                     full_prompt = f"""
-Dựa trên luật sau:
+Bạn là một "Chuyên gia Luật Giao thông Việt Nam" thông thái và tận tâm. 
+Nhiệm vụ của bạn là giải đáp thắc mắc của người dân dựa trên dữ liệu luật được cung cấp.
+
+DỮ LIỆU LUẬT TRA CỨU:
 {context}
 
-Hãy trả lời câu hỏi:
+HƯỚNG DẪN TRẢ LỜI:
+1. Phân tích câu hỏi và trả lời một cách chi tiết, dễ hiểu. Nếu có mức phạt cụ thể trong dữ liệu, hãy nêu rõ.
+2. Nếu dữ liệu luật tra cứu không nêu chi tiết mức phạt, hãy sử dụng kiến thức chuyên môn của bạn (như Nghị định 100/2019/NĐ-CP) để cung cấp thông tin tham khảo chính xác nhất thay vì nói "không có".
+3. Trình bày đẹp mắt, sử dụng các ký hiệu như ⚖️, 💰, 🚦 để người dùng dễ theo dõi.
+4. Tuyệt đối không trả lời máy móc theo kiểu "Dựa trên tài liệu bạn cung cấp...". Hãy trả lời như một người tư vấn luật thực thụ.
+
+CÂU HỎI CỦA NGƯỜI DÙNG: 
 {prompt}
 """
+                    # ----------------------------------------
                     answer = call_gemini(full_prompt)
 
             # In câu trả lời ra màn hình
