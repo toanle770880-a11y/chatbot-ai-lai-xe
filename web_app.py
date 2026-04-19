@@ -28,7 +28,7 @@ def load_ai_system():
         persist_directory="./my_vector_db",
         embedding_function=embed_model
     )
-    retriever = vector_db.as_retriever(search_kwargs={"k": 3})
+    retriever = vector_db.as_retriever(search_kwargs={"k": 7})
 
     return client, retriever
 
