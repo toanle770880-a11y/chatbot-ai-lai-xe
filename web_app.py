@@ -170,37 +170,41 @@ with tab1:
     if "messages" not in st.session_state:
         st.session_state.messages = []
 
-    for m in st.session_state.messages:
+    # --- ĐÃ SỬA: Thêm reversed để tin nhắn mới nhất nằm ở trên cùng ---
+    for m in reversed(st.session_state.messages):
         with st.chat_message(m["role"]):
             st.markdown(m["content"])
 
     if prompt := st.chat_input("Hỏi về mức phạt hoặc biển báo..."):
-        st.chat_message("user").markdown(prompt)
+        # Lưu câu hỏi của user vào session
         st.session_state.messages.append({"role": "user", "content": prompt})
 
-        with st.chat_message("assistant"):
-            with st.spinner("Đang phân tích..."):
-                if uploaded_file is not None:
-                    # 📷 XỬ LÝ ẢNH + CHỮ
-                    img = PIL.Image.open(uploaded_file)
-                    visual_prompt = f"Bạn là chuyên gia Luật Giao thông. Hãy nhìn ảnh và trả lời: {prompt}"
-                    answer = call_gemini_smart(visual_prompt, image=img)
-                else:
-                    # 📝 XỬ LÝ CHỮ + RAG
-                    docs = retriever.invoke(prompt)
-                    context = "\n".join([doc.page_content for doc in docs])
-                    
-                    rag_prompt = f"""
+        # Xử lý phản hồi từ AI
+        if uploaded_file is not None:
+            # 📷 XỬ LÝ ẢNH + CHỮ
+            import PIL.Image
+            img = PIL.Image.open(uploaded_file)
+            visual_prompt = f"Bạn là chuyên gia Luật Giao thông. Hãy nhìn ảnh và trả lời: {prompt}"
+            answer = call_gemini_smart(visual_prompt, image=img)
+        else:
+            # 📝 XỬ LÝ CHỮ + RAG
+            docs = retriever.invoke(prompt)
+            context = "\n".join([doc.page_content for doc in docs])
+            
+            rag_prompt = f"""
 Bạn là Chuyên gia Luật Giao thông Việt Nam. Hãy trả lời câu hỏi dựa trên dữ liệu sau.
 Nếu dữ liệu không có, hãy dùng kiến thức về Nghị định 100 để tư vấn có tâm nhất.
 
 DỮ LIỆU LUẬT: {context}
 CÂU HỎI: {prompt}
 """
-                    answer = call_gemini_smart(rag_prompt)
+            answer = call_gemini_smart(rag_prompt)
 
-            st.markdown(answer)
-            st.session_state.messages.append({"role": "assistant", "content": answer})
+        # Lưu câu trả lời của AI vào session
+        st.session_state.messages.append({"role": "assistant", "content": answer})
+        
+        # Làm mới giao diện để câu mới nhảy lên đầu
+        st.rerun()
 
 # ================= TAB 2: TRẮC NGHIỆM =================
 with tab2:
