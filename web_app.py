@@ -163,42 +163,50 @@ tab1, tab2 = st.tabs(["💬 Hỏi đáp", "📝 Trắc nghiệm"])
 with tab1:
     st.header("💬 Chat & Nhận diện hình ảnh")
     
-    # 1. Khu vực nhập liệu đưa lên ĐẦU TRANG
+    # 1. Khu vực nhập liệu (Luôn ở trên cùng)
     uploaded_file = st.file_uploader("🖼️ Đính kèm ảnh (biển báo, tình huống...)", type=["jpg", "jpeg", "png"])
     
-    if uploaded_file:
-        st.image(uploaded_file, caption="Ảnh đính kèm", width=250)
-
-    # Dùng form để khung nhập liệu nằm cố định ở đây, không nhảy xuống dưới
     with st.form(key='chat_form', clear_on_submit=True):
         user_input = st.text_input("Nhập câu hỏi tại đây:", placeholder="VD: Biển báo này có ý nghĩa gì?...")
         submit_button = st.form_submit_button(label='Gửi câu hỏi 🚀')
 
-    # 2. Xử lý Logic khi nhấn nút Gửi
+    # 2. Xử lý Logic
     if submit_button and user_input:
-        # Lưu câu hỏi vào lịch sử
         if "messages" not in st.session_state:
             st.session_state.messages = []
             
+        # Lưu câu hỏi của người dùng
         st.session_state.messages.append({"role": "user", "content": user_input})
 
         with st.spinner("Đang phân tích..."):
+            current_image = None
             if uploaded_file is not None:
-                # 📷 XỬ LÝ ẢNH
                 import PIL.Image
-                img = PIL.Image.open(uploaded_file)
+                current_image = PIL.Image.open(uploaded_file)
                 visual_prompt = f"Bạn là chuyên gia Luật Giao thông. Hãy nhìn ảnh và trả lời: {user_input}"
-                answer = call_gemini_smart(visual_prompt, image=img)
+                answer = call_gemini_smart(visual_prompt, image=current_image)
             else:
-                # 📝 XỬ LÝ CHỮ
                 docs = retriever.invoke(user_input)
                 context = "\n".join([doc.page_content for doc in docs])
                 rag_prompt = f"DỮ LIỆU LUẬT: {context}\nCÂU HỎI: {user_input}"
                 answer = call_gemini_smart(rag_prompt)
 
-        # Lưu câu trả lời vào lịch sử
-        st.session_state.messages.append({"role": "assistant", "content": answer})
+        # LƯU CẢ ẢNH VÀ VĂN BẢN VÀO CÙNG MỘT TIN NHẮN CỦA AI
+        st.session_state.messages.append({
+            "role": "assistant", 
+            "content": answer,
+            "image": current_image # Lưu ảnh vào đây để hiển thị kèm câu trả lời
+        })
         st.rerun()
+
+    # 3. Hiển thị tin nhắn (Đảo ngược, câu mới nhất ở trên)
+    if "messages" in st.session_state:
+        for m in reversed(st.session_state.messages):
+            with st.chat_message(m["role"]):
+                # Nếu tin nhắn có ảnh kèm theo (chỉ dành cho Assistant), hiện ảnh trước văn bản
+                if "image" in m and m["image"] is not None:
+                    st.image(m["image"], caption="Biển báo ông vừa hỏi", width=250)
+                st.markdown(m["content"])
 
     # 3. Khu vực hiển thị tin nhắn (Đảo ngược: Mới nhất ở trên)
     if "messages" in st.session_state:
