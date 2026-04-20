@@ -162,50 +162,49 @@ tab1, tab2 = st.tabs(["💬 Hỏi đáp", "📝 Trắc nghiệm"])
 # ================= TAB 1: HỎI ĐÁP =================
 with tab1:
     st.header("💬 Chat & Nhận diện hình ảnh")
+    
+    # 1. Khu vực nhập liệu đưa lên ĐẦU TRANG
     uploaded_file = st.file_uploader("🖼️ Đính kèm ảnh (biển báo, tình huống...)", type=["jpg", "jpeg", "png"])
     
     if uploaded_file:
         st.image(uploaded_file, caption="Ảnh đính kèm", width=250)
 
-    if "messages" not in st.session_state:
-        st.session_state.messages = []
+    # Dùng form để khung nhập liệu nằm cố định ở đây, không nhảy xuống dưới
+    with st.form(key='chat_form', clear_on_submit=True):
+        user_input = st.text_input("Nhập câu hỏi tại đây:", placeholder="VD: Biển báo này có ý nghĩa gì?...")
+        submit_button = st.form_submit_button(label='Gửi câu hỏi 🚀')
 
-    # --- ĐÃ SỬA: Thêm reversed để tin nhắn mới nhất nằm ở trên cùng ---
-    for m in reversed(st.session_state.messages):
-        with st.chat_message(m["role"]):
-            st.markdown(m["content"])
-
-    if prompt := st.chat_input("Hỏi về mức phạt hoặc biển báo..."):
-        # Lưu câu hỏi của user vào session
-        st.session_state.messages.append({"role": "user", "content": prompt})
-
-        # Xử lý phản hồi từ AI
-        if uploaded_file is not None:
-            # 📷 XỬ LÝ ẢNH + CHỮ
-            import PIL.Image
-            img = PIL.Image.open(uploaded_file)
-            visual_prompt = f"Bạn là chuyên gia Luật Giao thông. Hãy nhìn ảnh và trả lời: {prompt}"
-            answer = call_gemini_smart(visual_prompt, image=img)
-        else:
-            # 📝 XỬ LÝ CHỮ + RAG
-            docs = retriever.invoke(prompt)
-            context = "\n".join([doc.page_content for doc in docs])
+    # 2. Xử lý Logic khi nhấn nút Gửi
+    if submit_button and user_input:
+        # Lưu câu hỏi vào lịch sử
+        if "messages" not in st.session_state:
+            st.session_state.messages = []
             
-            rag_prompt = f"""
-Bạn là Chuyên gia Luật Giao thông Việt Nam. Hãy trả lời câu hỏi dựa trên dữ liệu sau.
-Nếu dữ liệu không có, hãy dùng kiến thức về Nghị định 100 để tư vấn có tâm nhất.
+        st.session_state.messages.append({"role": "user", "content": user_input})
 
-DỮ LIỆU LUẬT: {context}
-CÂU HỎI: {prompt}
-"""
-            answer = call_gemini_smart(rag_prompt)
+        with st.spinner("Đang phân tích..."):
+            if uploaded_file is not None:
+                # 📷 XỬ LÝ ẢNH
+                import PIL.Image
+                img = PIL.Image.open(uploaded_file)
+                visual_prompt = f"Bạn là chuyên gia Luật Giao thông. Hãy nhìn ảnh và trả lời: {user_input}"
+                answer = call_gemini_smart(visual_prompt, image=img)
+            else:
+                # 📝 XỬ LÝ CHỮ
+                docs = retriever.invoke(user_input)
+                context = "\n".join([doc.page_content for doc in docs])
+                rag_prompt = f"DỮ LIỆU LUẬT: {context}\nCÂU HỎI: {user_input}"
+                answer = call_gemini_smart(rag_prompt)
 
-        # Lưu câu trả lời của AI vào session
+        # Lưu câu trả lời vào lịch sử
         st.session_state.messages.append({"role": "assistant", "content": answer})
-        
-        # Làm mới giao diện để câu mới nhảy lên đầu
         st.rerun()
 
+    # 3. Khu vực hiển thị tin nhắn (Đảo ngược: Mới nhất ở trên)
+    if "messages" in st.session_state:
+        for m in reversed(st.session_state.messages):
+            with st.chat_message(m["role"]):
+                st.markdown(m["content"])
 # ================= TAB 2: TRẮC NGHIỆM =================
 with tab2:
     st.header("📝 Trắc nghiệm")
