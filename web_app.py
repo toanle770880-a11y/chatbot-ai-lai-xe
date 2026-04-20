@@ -166,16 +166,19 @@ with tab1:
     # 1. Khu vực nhập liệu (Luôn ở trên cùng)
     uploaded_file = st.file_uploader("🖼️ Đính kèm ảnh (biển báo, tình huống...)", type=["jpg", "jpeg", "png"])
     
+    # ✅ THÊM DÒNG NÀY: Để ảnh hiện ra ngay khi vừa add ảnh
+    if uploaded_file is not None:
+        st.image(uploaded_file, caption="Ảnh đang chọn", width=250)
+    
     with st.form(key='chat_form', clear_on_submit=True):
         user_input = st.text_input("Nhập câu hỏi tại đây:", placeholder="VD: Biển báo này có ý nghĩa gì?...")
         submit_button = st.form_submit_button(label='Gửi câu hỏi 🚀')
 
-    # 2. Xử lý Logic
+    # 2. Xử lý Logic khi nhấn nút Gửi
     if submit_button and user_input:
         if "messages" not in st.session_state:
             st.session_state.messages = []
             
-        # Lưu câu hỏi của người dùng
         st.session_state.messages.append({"role": "user", "content": user_input})
 
         with st.spinner("Đang phân tích..."):
@@ -191,11 +194,11 @@ with tab1:
                 rag_prompt = f"DỮ LIỆU LUẬT: {context}\nCÂU HỎI: {user_input}"
                 answer = call_gemini_smart(rag_prompt)
 
-        # LƯU CẢ ẢNH VÀ VĂN BẢN VÀO CÙNG MỘT TIN NHẮN CỦA AI
+        # Lưu vào lịch sử (kèm ảnh nếu có)
         st.session_state.messages.append({
             "role": "assistant", 
             "content": answer,
-            "image": current_image # Lưu ảnh vào đây để hiển thị kèm câu trả lời
+            "image": current_image 
         })
         st.rerun()
 
@@ -203,15 +206,8 @@ with tab1:
     if "messages" in st.session_state:
         for m in reversed(st.session_state.messages):
             with st.chat_message(m["role"]):
-                # Nếu tin nhắn có ảnh kèm theo (chỉ dành cho Assistant), hiện ảnh trước văn bản
                 if "image" in m and m["image"] is not None:
-                    st.image(m["image"], caption="Biển báo ông vừa hỏi", width=250)
-                st.markdown(m["content"])
-
-    # 3. Khu vực hiển thị tin nhắn (Đảo ngược: Mới nhất ở trên)
-    if "messages" in st.session_state:
-        for m in reversed(st.session_state.messages):
-            with st.chat_message(m["role"]):
+                    st.image(m["image"], width=250)
                 st.markdown(m["content"])
 # ================= TAB 2: TRẮC NGHIỆM =================
 with tab2:
